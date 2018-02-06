@@ -1331,8 +1331,8 @@ class PipetteTest(unittest.TestCase):
         expected = [
             mock.call(self.plate[0],
                       instrument=self.p200,
-                      low_current_z=False,
-                      strategy='arc'),
+                      strategy='arc',
+                      low_current_z=False),
             mock.call(
                 (self.plate[0], (6.40, 3.20, 10.50)),
                 instrument=self.p200,
@@ -1375,8 +1375,8 @@ class PipetteTest(unittest.TestCase):
                 strategy='direct'),
             mock.call(self.plate[1],
                       instrument=self.p200,
-                      low_current_z=False,
-                      strategy='arc'),
+                      strategy='arc',
+                      low_current_z=False),
             mock.call(
                 (self.plate[1], (4.80, 3.20, 10.50)),
                 instrument=self.p200,
@@ -1640,10 +1640,34 @@ class PipetteTest(unittest.TestCase):
 
         self.assertEqual(self.p200.drop_tip.mock_calls, expected)
 
+    def test_direct_movement_within_well(self):
+        self.robot.move_to = mock.Mock()
+        self.p200.move_to(self.plate[0])
+        self.p200.move_to(self.plate[0].top())
+        self.p200.move_to(self.plate[0].bottom())
+        self.p200.move_to(self.plate[1])
+        self.p200.move_to(self.plate[2])
+        self.p200.move_to(self.plate[2].bottom())
+
+        expected = [
+            mock.call(
+                self.plate[0], self.p200, strategy='arc', low_current_z=False),
+            mock.call(
+                self.plate[0].top(), self.p200, strategy='direct', low_current_z=False),
+            mock.call(
+                self.plate[0].bottom(), self.p200, strategy='direct', low_current_z=False),
+            mock.call(
+                self.plate[1], self.p200, strategy='arc', low_current_z=False),
+            mock.call(
+                self.plate[2], self.p200, strategy='arc', low_current_z=False),
+            mock.call(
+                self.plate[3], self.p200, strategy='direct', low_current_z=False)
+        ]
+
     def build_pick_up_tip(self, well):
         plunge = -10
         return [
-            mock.call(well.top(), strategy='arc'),
+            mock.call(well.top()),
             mock.call(well.top(plunge), low_current_z=True, strategy='direct'),
             mock.call(well.top(), strategy='direct'),
             mock.call(well.top(plunge), low_current_z=True, strategy='direct'),

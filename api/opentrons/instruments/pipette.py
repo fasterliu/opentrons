@@ -251,7 +251,7 @@ class Pipette:
         if not self.placeables or (placeable != self.placeables[-1]):
             self.placeables.append(placeable)
 
-    def move_to(self, location, strategy='arc', low_current_z=False):
+    def move_to(self, location, strategy=None, low_current_z=False):
         """
         Move this :any:`Pipette` to a :any:`Placeable` on the :any:`Deck`
 
@@ -285,7 +285,16 @@ class Pipette:
         if not location:
             return self
 
-        self._associate_placeable(location)
+        placeable, _ = unpack_location(location)
+
+        if strategy is None:
+            # if no strategy is specified, default to type 'arc'
+            strategy = 'arc'
+            # unless we are still within the same Well, then move directly
+            if placeable == self.previous_placeable:
+                strategy = 'direct'
+
+        self._associate_placeable(placeable)
         self.robot.move_to(
             location,
             instrument=self,
@@ -497,7 +506,7 @@ class Pipette:
         # first go to the destination
         if location:
             placeable, _ = unpack_location(location)
-            self.move_to(placeable.top(), strategy='arc')
+            self.move_to(placeable.top())
 
         # setup the plunger above the liquid
         if self.current_volume == 0:
@@ -521,7 +530,7 @@ class Pipette:
         # first go to the destination
         if location:
             placeable, _ = unpack_location(location)
-            self.move_to(placeable.top(), strategy='arc')
+            self.move_to(placeable.top())
 
         # then go inside the location
         if location:
@@ -630,7 +639,7 @@ class Pipette:
         """
         assert self.tip_attached
 
-        self.move_to(location, strategy='arc')
+        self.move_to(location)
         self.robot.poses = self.instrument_actuator.move(
             self.robot.poses,
             x=self._get_plunger_position('blow_out')
@@ -691,7 +700,7 @@ class Pipette:
         # if no location specified, use the previously
         # associated placeable to get Well dimensions
         if location:
-            self.move_to(location, strategy='arc')
+            self.move_to(location)
         else:
             location = self.previous_placeable
 
@@ -872,7 +881,7 @@ class Pipette:
                 x=self._get_plunger_position('bottom')
             )
             self.current_volume = 0
-            self.move_to(self.current_tip().top(0), strategy='arc')
+            self.move_to(self.current_tip().top(0))
 
             for i in range(int(presses)):
                 # move nozzle down into the tip
@@ -956,7 +965,7 @@ class Pipette:
         @commands.publish.both(command=commands.drop_tip)
         def _drop_tip(location, instrument=self):
             if location:
-                self.move_to(location, strategy='arc')
+                self.move_to(location)
 
             self.robot.poses = self.instrument_actuator.move(
                 self.robot.poses,
