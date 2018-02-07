@@ -24,7 +24,7 @@ class Mover:
 
         return self.move(pose_tree, **target)
 
-    def move(self, pose_tree, x=None, y=None, z=None, low_current_z=False):
+    def move(self, pose_tree, x=None, y=None, z=None):
         """
         Dispatch move command to the driver changing base of
         x, y and z from source coordinate system to destination.
@@ -57,7 +57,7 @@ class Mover:
             assert z is not None, "Value must be set for each axis mapped"
             driver_target[self._axis_mapping['z']] = dst_z
 
-        self._driver.move(driver_target, low_current_z)
+        self._driver.move(driver_target)
 
         # Update pose with the new value. Since stepper motors are open loop
         # there is no need to to query diver for position
@@ -93,8 +93,23 @@ class Mover:
     def set_speed(self, value):
         self._driver.set_speed(value)
 
-    def default_speed(self):
-        self._driver.default_speed()
+    def push_speed(self):
+        self._driver.push_speed()
+
+    def pop_speed(self):
+        self._driver.pop_speed()
+
+    def set_current(self, power):
+        self._driver.set_current({
+                axis.upper(): power
+                for axis in self._axis_mapping.values()
+            })
+
+    def push_current(self):
+        self._driver.push_current()
+
+    def pop_current(self):
+        self._driver.pop_current()
 
     def probe(self, pose_tree, axis, movement):
         assert axis in self._axis_mapping, "mapping is not set for " + axis

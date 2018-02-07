@@ -50,10 +50,7 @@ export type LabwareCalibrationStatus =
   | 'moving-to-slot'
   | 'over-slot'
   | 'picking-up'
-  | 'homing'
-  | 'homed'
-  | 'updating'
-  | 'updated'
+  | 'picked-up'
   | 'confirming'
   | 'confirmed'
 
@@ -85,6 +82,12 @@ export type StateInstrument = {
   volume: number,
 }
 
+export type Instrument = StateInstrument & {
+  calibration: InstrumentCalibrationStatus,
+  probed: boolean,
+  tipOn: boolean
+}
+
 // labware as stored in redux state
 export type StateLabware = {
   // resource ID
@@ -103,5 +106,6 @@ export type StateLabware = {
 
 export type Labware = StateLabware & {
   calibration: LabwareCalibrationStatus,
-  confirmed: boolean
+  confirmed: boolean,
+  isMoving: boolean
 }

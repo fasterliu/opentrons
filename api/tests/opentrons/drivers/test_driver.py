@@ -43,7 +43,7 @@ def test_plunger_commands(smoothie, monkeypatch):
         ['G4P0.05 M400'],                      # delay for current
         ['G0F3000 M400'],                      # set Y motor to low speed
         ['G0Y-20 M400'],                       # move Y motor away from switch
-        ['M907 Y1.5 M400'],                    # set Y back to high current
+        ['M907 A0.8 B0.1 C0.1 X1.2 Y1.5 Z0.8 M400'],  # set current back
         ['G4P0.05 M400'],                      # delay for current
         ['G0F9000 M400'],                      # set back to default speed
         ['G28.2X M400'],                       # home X
@@ -83,31 +83,32 @@ def test_functional(smoothie):
     assert smoothie.position == HOMED_POSITION
 
 
-current = []
-
-
-def test_low_current_z(model):
+def test_set_current(model):
     from opentrons.robot.robot_configs import DEFAULT_CURRENT
     import types
     driver = model.robot._driver
 
     set_current = driver.set_current
 
-    def set_current_mock(self, target):
-        global current
-        current.append(target)
+    current_log = []
 
+    def set_current_mock(self, target):
+        nonlocal current_log
+        current_log.append(target)
         set_current(target)
 
     driver.set_current = types.MethodType(set_current_mock, driver)
 
-    driver.move({'A': 100}, low_current_z=False)
+    rack = model.robot.add_container('tiprack-200ul', '10')
+    pipette = model.instrument._instrument
+    pipette.pick_up_tip(rack[0], presses=1)
+
     # Instrument in `model` is configured to right mount, which is the A axis
     # on the Smoothie (see `Robot._actuators`)
-    assert current == []
-
-    driver.move({'A': 10}, low_current_z=True)
-    assert current == [{'A': 0.1}, DEFAULT_CURRENT]
+    expected = [{'A': 0.1}, DEFAULT_CURRENT]
+    from pprint import pprint
+    pprint(current_log)
+    assert current_log == expected
 
 
 def test_fast_home(model):
@@ -240,6 +241,7 @@ def test_speed_change(model, monkeypatch):
                         write_with_log)
 
     pipette.tip_attached = True
+    pipette.set_speed(aspirate=20, dispense=40)
     pipette.aspirate().dispense()
     expected = [
         ['G0F1200 M400'],  # pipette's default aspirate speed in mm/min
@@ -247,6 +249,8 @@ def test_speed_change(model, monkeypatch):
         ['G0F2400 M400'],  # pipette's default dispense speed in mm/min
         ['G0F9000 M400']
     ]
+    # from pprint import pprint
+    # pprint(command_log)
     fuzzy_assert(result=command_log, expected=expected)
 
 
@@ -269,8 +273,9 @@ def test_max_speed_change(model, monkeypatch):
     robot.head_speed(555)
     robot.head_speed(x=1, y=2, z=3, a=4, b=5, c=6)
     robot.head_speed(123, x=7)
+    robot._driver.push_speed()
     robot._driver.set_speed(321)
-    robot._driver.default_speed()
+    robot._driver.pop_speed()
     expected = [
         ['G0F{} M400'.format(555 * 60)],
         ['M203.1 A4 B5 C6 X1 Y2 Z3 M400'],
@@ -279,8 +284,8 @@ def test_max_speed_change(model, monkeypatch):
         ['G0F{} M400'.format(321 * 60)],
         ['G0F{} M400'.format(123 * 60)]
     ]
-    from pprint import pprint
-    pprint(command_log)
+    # from pprint import pprint
+    # pprint(command_log)
     fuzzy_assert(result=command_log, expected=expected)
 
 
