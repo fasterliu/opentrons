@@ -283,11 +283,11 @@ export const getLabware = createSelector(
             calibration = inProgress
               ? 'moving-to-slot'
               : 'over-slot'
-          } else if (
-            type === 'PICKUP_AND_HOME' ||
-            // update offset picks up and homes with tipracks
-            (type === 'UPDATE_OFFSET' && labware.isTiprack)
-          ) {
+          } else if (type === 'JOG') {
+            calibration = inProgress
+              ? 'jogging'
+              : 'over-slot'
+          } else if (type === 'PICKUP_AND_HOME') {
             calibration = inProgress
               ? 'picking-up'
               : 'picked-up'
